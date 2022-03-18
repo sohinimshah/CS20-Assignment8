@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Jade Delight</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<style>
+    label {
+		display: inline-block;
+        width: 125px;
+    }
+</style>
+</head>
+
+<body>
+<script>
+
+function MenuItem(name, cost)
+{
+	this.name = name;
+	this.cost=cost;
+}
+
+menuItems = new Array(
+	new MenuItem("Chicken Chop Suey", 4.5),
+	new MenuItem("Sweet and Sour Pork", 6.25),
+	new MenuItem("Shrimp Lo Mein", 6.25),
+	new MenuItem("Moo Shi Chicken", 7.5),
+	new MenuItem("Fried Rice", 2.85)
+);
+
+//Hide the city and street fields unless delivery is selected
+$(document).ready(function() {
+	$('label[for=street]').hide();
+	$('label[for=city]').hide();
+	$("input[name='city']").hide();
+	$("input[name='street']").hide();
+	document.forms["myForm"]["street"].required = false;
+	document.forms["myForm"]["city"].required = false;
+});
+
+function makeSelect(name, minRange, maxRange)
+{
+	var t= "";
+	t = "<select name='" + name + "' size='1' onchange=calculatePrice(this)>";
+	for (j=minRange; j<=maxRange; j++)
+	   t += "<option>" + j + "</option>";
+	t+= "</select>"; 
+	return t;
+}
+
+function td(content, className="")
+{
+	return "<td class = '" + className + "'>" + content + "</td>";
+}
+
+//Calculate the price based off of the number of selected items
+function calculatePrice(s) {
+	var selectIndex = s.name.substring(4);
+	var quantity = s.options[s.selectedIndex].value;
+	var cost = menuItems[selectIndex].cost;
+	var itemTotalCost = quantity * cost;
+
+	//Updating total cost of each item
+	document.getElementsByName("cost")[selectIndex].value = itemTotalCost.toFixed(2);
+
+	//Updating subtotal, tax, and total
+	var subtotal = 0;
+	for (i = 0; i < menuItems.length; i++) {
+		var cost = document.getElementsByName("cost")[i].value;
+		if (cost != "") {
+			subtotal += parseFloat(cost);
+		}
+	}
+	document.getElementById("subtotal").value = subtotal.toFixed(2);
+	document.getElementById("tax").value = (subtotal * 0.0625).toFixed(2);
+	document.getElementById("total").value = (subtotal * 1.0625).toFixed(2);
+}
+
+//Field hidden for pickup
+function hideCityAndStreet(pickupButton) {
+	if (pickupButton.checked) {
+		//Hide fields
+		$('label[for=street]').hide();
+		$('label[for=city]').hide();
+		$("input[name='city']").hide();
+		$("input[name='street']").hide();
+	}
+}
+
+//Field shown for delivery
+function showCityAndStreet(deliveryButton) {
+	if (deliveryButton.checked) {
+		//Show fields
+		$('label[for=street]').show();
+		$('label[for=city]').show();
+		$("input[name='city']").show();
+		$("input[name='street']").show();
+	}
+}
+
+function validateInfo() {
+	//Verifying the phone number
+	var phoneNumber = document.getElementsByName("phone")[0].value;
+	var isValidPhoneNumber = validatePhoneNumber(phoneNumber);
+	if (!isValidPhoneNumber) {
+		alert("ERROR - FORM INVALID: Invalid phone number");
+	}
+
+	var phoneNumberProvided = false;
+	//Check if phone number was provided
+	if (phoneNumber != "") {
+		phoneNumberProvided = true;
+	} else {
+		alert("Please provide a phone number");
+	}
+
+	var lastNameProvided = false;
+	//Check if last name was provided
+	var lastName = document.forms["myForm"]["lname"].value;
+	if (lastName != "") {
+		lastNameProvided = true;
+	} else {
+		alert("Please provide a last name");
+	}
+
+	//Pickup or delivery time
+	var timeDisplayed = pickupOrDeliveryTime();
+
+	//Require Street and City info if delivery
+	if (document.getElementById("delivery").checked) {
+		//Check if street was provided
+		var streetProvided = false;
+		if (document.forms["myForm"]["street"].value == "") {
+			alert("Please provide street information");
+		} else {
+			streetProvided = true;
+		}
+		//Check if city was provided
+		var cityProvided = false;
+		if (document.forms["myForm"]["city"].value == "") {
+			alert("Please provide city information");
+		} else {
+			cityProvided = true;
+		}
+	}
+
+	//Check if info is valid, if yes then proceed to confirmation
+	if (lastNameProvided && phoneNumberProvided && (hasOneItem()) && isValidPhoneNumber) {
+		if ((document.getElementById("delivery").checked) && streetProvided && cityProvided) {
+			alert("Thank you for ordering at Jade Delight!");
+			newWindowObj = window.open();
+			var orderInfo = orderDetails();
+			orderInfo += "Time: " + timeDisplayed;
+			newWindowObj.document.write(orderInfo);
+		} else if ((document.getElementById("pickup").checked)) {
+			alert("Thank you for ordering at Jade Delight!");
+			newWindowObj = window.open();
+			var orderInfo = orderDetails();
+			orderInfo += "Time: " + timeDisplayed;
+			newWindowObj.document.write(orderInfo);
+		}
+	}
+}
+
+//Calculates ready time based on if it is pickup or delivery
+function pickupOrDeliveryTime() {
+	var time = new Date();
+	var timeDisplayed = "";
+	//If service option is "pickup"
+	if (document.getElementById("pickup").checked) { 
+		//Calculating the pickup time
+		var pickupTime = new Date(time.getTime() + 15 * 60000);
+		timeDisplayed = pickupTime.getHours() + ":" + pickupTime.getMinutes();
+	} else { //If service option is "delivery"
+		//Calculating the delivery time
+		var deliveryTime = new Date(time.getTime() + 30 * 60000);
+		timeDisplayed = deliveryTime.getHours() + ":" + deliveryTime.getMinutes();
+	}
+	return timeDisplayed;
+}
+
+//Verify phone number
+function validatePhoneNumber(phoneNumber) {
+	var pN = /^\(?(\d{3})\)?[- ]?(\d{3})[- ]?(\d{4})$/;
+	return pN.test(phoneNumber);
+}
+
+//Checks number of items and returns true if there are at least 1 item
+function hasOneItem() {
+	var subtotal = document.getElementById("subtotal").value;
+	if (subtotal == "" || subtotal == "0.00") {
+		alert("ERROR - FORM INVALID: Please order at least 1 item");
+		return false;
+	} else {
+		return true;
+	}
+}
+
+//Compiles order details into a string
+function orderDetails() {
+	var orderInfo = "";
+	for (let i = 0; i < menuItems.length; i++) {
+		var itemTotalCost = document.getElementsByName("cost")[i].value;
+		if ((itemTotalCost != "") && (itemTotalCost != "0.00")) {
+			var quantity = itemTotalCost / menuItems[i].cost;
+			orderInfo += quantity + " " + menuItems[i].name + " ($" + menuItems[i].cost + " each) <br>";
+		}
+	}
+	var subtotal = document.getElementById("subtotal").value;
+	var tax = document.getElementById("tax").value;
+	var total =  document.getElementById("total").value;
+	orderInfo += "Subtotal: $" + subtotal + "<br>Tax: $" + tax + "<br>Total: $" + total + "<br>";
+	return orderInfo;
+}
+	
+</script>
+
+<h1>Jade Delight</h1>
+<form name="myForm">
+
+<p class="userInfo"><label>First Name:</label> <input type="text"  name='fname' /></p>
+<p class="userInfo"><label>Last Name*:</label> <input type="text"  name='lname' required="required"/></p>
+<p class="userInfo address"><label for='street'>Street*:</label> <input type="text" name='street' /></p>
+<p class="userInfo address"><label for='city'>City*:</label> <input type="text" name='city' /></p>
+<p class="userInfo"><label>Phone*:</label> <input type="text"  name='phone' required="required"/></p>
+<p> 
+	<input type="radio"  name="p_or_d" value = "pickup" id = "pickup" checked="checked" onclick="hideCityAndStreet(this)"/>Pickup  
+	<input type="radio"  name='p_or_d' value = 'delivery' id = "delivery" onclick="showCityAndStreet(this)"/>
+	Delivery
+</p>
+<table border="0" cellpadding="3">
+  <tr>
+    <th>Select Item</th>
+    <th>Item Name</th>
+    <th>Cost Each</th>
+    <th>Total Cost</th>
+  </tr>
+<script>
+
+  var s = "";
+  for (i=0; i< menuItems.length; i++)
+  {
+	  s += "<tr>";
+	  s += td(makeSelect("quan" + i, 0, 10),"selectQuantity");
+	  s += td(menuItems[i].name, "itemName");
+	  s += td("$" +menuItems[i].cost.toFixed(2), "cost");
+	  s += td("$<input type='text' name='cost'/>", "totalCost");
+	  s+= "</tr>";
+  }
+
+  document.writeln(s);
+</script>
+</table>
+<p class="subtotal totalSection"><label>Subtotal:</label> 
+   $ <input type="text"  name='subtotal' id="subtotal" />
+</p>
+<p class="tax totalSection"><label>Mass tax 6.25%:</label>
+  $ <input type="text"  name='tax' id="tax" />
+</p>
+<p clas="total totalSection"><label>Total:</label> $ <input type="text"  name='total' id="total" />
+</p>
+
+<input type = "button" value = "Submit Order" onclick="validateInfo()" />
+
+</form>
+</body>
+</html>
